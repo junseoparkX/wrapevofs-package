@@ -1,0 +1,111 @@
+split:
+  ratio: "7:3"
+  random_state: 42
+  shuffle: true
+  stratify: true
+  stratify_columns: []
+
+preprocessing:
+  numeric_only: true
+  missingness_threshold:
+  impute_strategy: "zero"
+  drop_zero_variance: false
+  scaling: "none"
+  correlation_threshold:
+  error_on_missing_features: true
+
+first_stage:
+  enabled_methods: ["xgboost", "svm_l1", "boruta_rf"]
+  skip_missing_optional: true
+  xgboost:
+    importance_threshold: 0.0
+    top_k: 100
+    cv_folds: 5
+    scoring: "auto"
+    param_grid:
+      subsample: [0.6, 0.7, 0.8]
+      colsample_bytree: [0.7, 0.8, 1.0]
+      n_estimators: [80, 100, 120]
+    base_params:
+      learning_rate: 0.3
+      gamma: 0
+      max_depth: 6
+      reg_lambda: 1
+      reg_alpha: 0
+  svm_l1:
+    coefficient_threshold: 0.000001
+    standardize: true
+    cv_folds: 5
+    scoring: "auto"
+    c_grid: [0.001, 0.01, 0.1, 1.0, 10.0, 30.0, 100.0]
+    penalty: "l1"
+    dual: false
+    max_iter: 100000
+    tol: 0.0001
+    class_weight:
+  boruta_rf:
+    include_tentative: true
+    perc: 95
+    alpha: 0.05
+    max_iter: 150
+
+rfecv:
+  estimator: "random_forest"
+  max_features_to_consider: 25
+  method_max_features_to_consider:
+    xgboost: 20
+    svm_l1: 20
+    boruta_rf: 25
+  cv_folds: 5
+  scoring: "auto"
+  step: 1
+  min_features_to_select: 1
+  n_jobs: 1
+
+ga:
+  enabled: true
+  backend: "auto"
+  population_size: 50
+  n_generations: 50
+  n_runs: 5
+  crossover_rate: 0.8
+  mutation_rate: 0.05
+  elitism_count: 2
+  initial_off_ratio: 0.30
+  size_penalty_lambda: 0.015
+  fitness_mode: "legacy_zero_truncated_linear"
+  sampling_epsilon: 1.0e-12
+  legacy_zero_fraction_warning: 0.50
+  target_deviation_warning_threshold:
+  minimum_unique_masks_warning: 2
+  top_k: 5
+  cv_folds: 5
+  fitness_metric: "accuracy"
+  random_state: 42
+  n_jobs: 1
+  verbose: false
+  progress_interval: 10
+  checkpoint_dir:
+  gpu_rf_params:
+    n_bins: 16
+
+locking:
+  enabled: false
+  strategy: "top_k_jaccard_medoid"
+  top_k: 3
+  tolerance_mode: "absolute"
+  regret_tolerance: 0.01
+  minimum_pool_size: 1
+  fallback_rule: "strict_eligible_only"
+  tie_breakers:
+    - "higher_locking_score"
+    - "smaller_feature_count"
+    - "stable_mask_hash"
+  epsilon: 1.0e-12
+  metric_orientation: "larger_is_better"
+  locking_metric: "auto"
+  cv_folds: 5
+  random_state: 42
+
+scoring:
+  unified_metric:

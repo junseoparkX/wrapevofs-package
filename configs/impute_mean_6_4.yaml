@@ -1,0 +1,16 @@
+split:
+  ratio: "6:4"
+
+preprocessing:
+  impute_strategy: "mean"
+  missingness_threshold: 0.30
+  scaling: "standard"
+  correlation_threshold: 0.95
+
+rfecv:
+  max_features_to_consider: 20
+
+ga:
+  population_size: 50
+  size_penalty_lambda: 0.015
+  top_k: 5

@@ -1,0 +1,55 @@
+# Local data and experiment outputs
+data/
+datasets/
+runs/
+outputs/
+artifacts/
+checkpoints/
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.joblib
+*.xlsx
+*.xls
+*.dcm
+*.nii
+*.nii.gz
+*.nrrd
+*.mha
+*.mhd
+*.pdf
+*.log
+
+# Python build/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Environment files
+.env
+.venv/
+venv/
+.revision_env/
+.ipython_tmp/
+.ipython_validate/
+.tmp/
+tmp/
+
+# Local editor/system/Codex files
+.vscode/
+.idea/
+.agents/
+.codex/
+.private_release_backup/
+.public_release_cleanroom/
+.DS_Store
+Thumbs.db
+desktop.ini

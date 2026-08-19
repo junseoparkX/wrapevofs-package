@@ -1,0 +1,51 @@
+split:
+  ratio: "7:3"
+  random_state: 42
+  stratify: true
+
+preprocessing:
+  impute_strategy: "zero"
+  missingness_threshold:
+  drop_zero_variance: false
+  scaling: "none"
+  correlation_threshold:
+
+first_stage:
+  enabled_methods: ["svm_l1"]
+  svm_l1:
+    standardize: true
+    c_grid: [0.01, 0.1, 1.0]
+    cv_folds: 3
+    n_jobs: 1
+    max_iter: 100000
+
+rfecv:
+  method_max_features_to_consider:
+    svm_l1: 8
+  cv_folds: 3
+  step: 5
+  n_jobs: 1
+  rf_params:
+    n_estimators: 25
+    max_depth: 4
+    min_samples_leaf: 2
+    bootstrap: true
+
+ga:
+  backend: "auto"
+  population_size: 12
+  n_generations: 2
+  n_runs: 1
+  top_k: 2
+  cv_folds: 3
+  n_jobs: 1
+  verbose: true
+  progress_interval: 10
+  checkpoint_dir:
+  rf_params:
+    n_estimators: 25
+    max_depth: 4
+    min_samples_leaf: 2
+    bootstrap: true
+  gpu_rf_params:
+    n_bins: 16

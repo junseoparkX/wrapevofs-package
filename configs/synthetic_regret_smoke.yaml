@@ -1,0 +1,62 @@
+split:
+  ratio: "7:3"
+  random_state: 42
+  stratify: true
+
+preprocessing:
+  impute_strategy: "zero"
+  drop_zero_variance: false
+  scaling: "none"
+
+first_stage:
+  enabled_methods: ["svm_l1"]
+  svm_l1:
+    standardize: true
+    c_grid: [0.01, 0.1, 1.0]
+    cv_folds: 3
+    n_jobs: 1
+    max_iter: 100000
+
+rfecv:
+  method_max_features_to_consider:
+    svm_l1: 8
+  cv_folds: 3
+  step: 5
+  n_jobs: 1
+  rf_params:
+    n_estimators: 20
+    max_depth: 4
+    min_samples_leaf: 2
+    bootstrap: true
+
+ga:
+  enabled: true
+  backend: "cpu"
+  fitness_mode: "untruncated_shifted_linear"
+  population_size: 8
+  n_generations: 2
+  n_runs: 3
+  top_k: 3
+  cv_folds: 3
+  n_jobs: 1
+  random_state: 42
+  progress_interval: 1
+  rf_params:
+    n_estimators: 15
+    max_depth: 4
+    min_samples_leaf: 2
+    bootstrap: true
+
+locking:
+  enabled: true
+  strategy: "regret_constrained_medoid"
+  tolerance_mode: "absolute"
+  regret_tolerance: 0.01
+  minimum_pool_size: 1
+  fallback_rule: "strict_eligible_only"
+  locking_metric: "macro_ovr_auroc"
+  cv_folds: 3
+  random_state: 42
+
+scoring:
+  unified_metric: "macro_ovr_auroc"

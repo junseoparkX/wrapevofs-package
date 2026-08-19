@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this package, please cite the software and its associated manuscript when available."
+title: "WrapEvoFS: Auditable Stochastic Feature Compression under Development-CV Regret Constraints"
+type: software
+version: "0.2.0"
+authors:
+  - family-names: "Park"
+    given-names: "Junseo"
+repository-code: "https://github.com/junseoparkX/wrapevofs-package"
+license: BSD-3-Clause
+keywords:
+  - tabular data
+  - feature selection
+  - stochastic compression
+  - development-CV regret
+  - genetic algorithm
+  - random forest

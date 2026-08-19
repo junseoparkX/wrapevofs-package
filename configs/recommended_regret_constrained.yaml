@@ -1,0 +1,29 @@
+# Recommended configuration for new analyses. Historical configurations that
+# omit these fields continue to use the archived zero-truncated GA and locking
+# behavior.
+ga:
+  fitness_mode: "untruncated_shifted_linear"
+  sampling_epsilon: 1.0e-12
+  legacy_zero_fraction_warning: 0.50
+  target_deviation_warning_threshold: 10
+  minimum_unique_masks_warning: 2
+  top_k: 5
+
+locking:
+  enabled: true
+  strategy: "regret_constrained_medoid"
+  tolerance_mode: "absolute"
+  regret_tolerance: 0.01
+  minimum_pool_size: 1
+  fallback_rule: "strict_eligible_only"
+  tie_breakers:
+    - "higher_locking_score"
+    - "smaller_feature_count"
+    - "stable_mask_hash"
+  metric_orientation: "larger_is_better"
+  locking_metric: "macro_ovr_auroc"
+  cv_folds: 5
+  random_state: 42
+
+scoring:
+  unified_metric: "macro_ovr_auroc"
