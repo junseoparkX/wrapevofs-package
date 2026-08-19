@@ -1,5 +1,10 @@
 # WrapEvoFS
 
+[![PyPI version](https://img.shields.io/pypi/v/wrapevofs.svg)](https://pypi.org/project/wrapevofs/)
+[![Python versions](https://img.shields.io/pypi/pyversions/wrapevofs.svg)](https://pypi.org/project/wrapevofs/)
+[![CI](https://github.com/junseoparkX/wrapevofs-package/actions/workflows/ci.yml/badge.svg)](https://github.com/junseoparkX/wrapevofs-package/actions/workflows/ci.yml)
+[![License](https://img.shields.io/pypi/l/wrapevofs.svg)](LICENSE)
+
 WrapEvoFS is a Python package for auditable stochastic feature compression. It combines branch-specific screening, RFECV-derived size guidance, repeated genetic searches, and deterministic regret-constrained representative locking for binary or multiclass tabular classification. Selection and locking use development data only; held-out outcomes are not inputs to the locking decision.
 
 ## Key features
@@ -14,9 +19,24 @@ WrapEvoFS is a Python package for auditable stochastic feature compression. It c
 
 ## Installation
 
-WrapEvoFS supports Python 3.10–3.12. Install from a source checkout:
+WrapEvoFS supports Python 3.10–3.12. Install the latest public release from
+[PyPI](https://pypi.org/project/wrapevofs/):
 
 ```bash
+python -m pip install wrapevofs
+```
+
+For an exact, reproducible installation of the manuscript-associated release:
+
+```bash
+python -m pip install wrapevofs==0.2.0
+```
+
+For development from a source checkout:
+
+```bash
+git clone https://github.com/junseoparkX/wrapevofs-package.git
+cd wrapevofs-package
 python -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install -e .
