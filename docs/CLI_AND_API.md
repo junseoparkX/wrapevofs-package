@@ -4,6 +4,7 @@
 
 ```bash
 wrapevofs run --help
+wrapevofs --version
 ```
 
 New methodological options:
@@ -14,14 +15,17 @@ New methodological options:
 - `--regret-tolerance`: nonnegative development-score tolerance;
 - `--minimum-pool-size`: required eligible-pool size;
 - `--unified-metric`: compatible metric applied across RFECV, GA, and locking.
+- `--resume`: require matching atomic GA resume state; never silently restart.
 
-Passing `--locking-strategy` enables locking. Locking executes only when `--run-ga` is also used because retained GA candidates are required.
+Passing `--locking-strategy` enables locking. Locking executes only when `--run-ga` is also used because retained GA candidates are required. `--resume` also requires `--run-ga`.
 
 ## Python configuration
 
 `PipelineConfig` contains `ga`, `locking`, and `scoring` sections. New fields are serializable through `PipelineConfig.from_dict`, `from_yaml`, and `to_dict`.
 
 `WrapEvoPipeline.run_locking(prepared, first_stage, ga_results)` rescored retained masks on `prepared.X_train` and `prepared.y_train` only. The public `score_candidate_feature_sets` and `lock_representative_run` functions have no held-out arguments.
+
+`validate_locking_artifact_directory(path)` checks required CSV/JSON fields, package/schema versions, selected-feature consistency, and strict selected eligibility.
 
 ## Best-run-SE-scaled requirements
 

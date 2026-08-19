@@ -56,6 +56,8 @@ Legacy modes are retained to reproduce archived analyses. They are not silently 
 
 Configuration objects record split, RFECV, genetic-search, and locking seeds. Canonical feature masks are encoded against one ordered candidate universe and hashed with SHA-256. Stable hashes order scientific ties; they are not probabilistic scores. Source run IDs are retained as provenance labels after feature-set selection.
 
+When `ga.checkpoint_dir` is configured, `resume_state.npz` records the next population, random-generator state, completed history, and fingerprints of the package, configuration, ordered feature universe, and exact development inputs. Resume requires all fingerprints to match and never falls back to a fresh search. See `docs/CHECKPOINT_RESUME.md`.
+
 When distinct source runs contain the same mask, the records remain separate voting candidates. Their multiplicity is part of the supplied candidate bank and is recorded in the locking audit.
 
 See `docs/ARTIFACT_SCHEMA.md` for the complete output schema.

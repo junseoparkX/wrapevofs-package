@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from wrapevofs.pipeline import PipelineResult, PreparedData
+from wrapevofs._version import ARTIFACT_SCHEMA_VERSION, __version__
 
 
 def _json_default(value: Any) -> Any:
@@ -35,6 +36,16 @@ def save_prepared_data(prepared: PreparedData, output_dir: str | Path) -> None:
 def save_pipeline_result(result: PipelineResult, output_dir: str | Path) -> None:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
+    with (output / "software_metadata.json").open("w", encoding="utf-8") as handle:
+        json.dump(
+            {
+                "software_name": "wrapevofs",
+                "software_version": __version__,
+                "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
+            },
+            handle,
+            indent=2,
+        )
     save_prepared_data(result.prepared, output / "preprocessed")
     for name, selection in result.first_stage.items():
         method_dir = output / "first_stage" / name

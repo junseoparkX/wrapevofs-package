@@ -41,7 +41,12 @@ gpu = [
   "cuml-cu12; platform_system == 'Linux'"
 ]
 all = ["xgboost>=2.0", "boruta>=0.3"]
-dev = ["build>=1.2", "pytest>=7.4", "twine>=5.0"]
+dev = [
+  "build>=1.2",
+  "pytest>=7.4",
+  "tomli>=2.0; python_version < '3.11'",
+  "twine>=5.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/junseoparkX/wrapevofs-package"

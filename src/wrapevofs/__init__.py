@@ -1,6 +1,10 @@
 """Public API for wrapevofs."""
 
-__version__ = "0.2.0"
+from wrapevofs._version import (
+    ARTIFACT_SCHEMA_VERSION,
+    CONFIG_SCHEMA_VERSION,
+    __version__,
+)
 
 from wrapevofs.config import (
     BorutaRFWrapperConfig,
@@ -23,12 +27,14 @@ from wrapevofs.locking import (
     score_candidate_feature_sets,
 )
 from wrapevofs.preprocessing import TabularPreprocessor
+from wrapevofs.validation import validate_locking_artifact_directory
 from wrapevofs.selectors.genetic_rf import GASolution, GeneticRFResult, run_genetic_rf
 from wrapevofs.split import parse_split_ratio, train_test_split_frame
 
 __all__ = [
-    "__version__",
+    "ARTIFACT_SCHEMA_VERSION",
     "BorutaRFWrapperConfig",
+    "CONFIG_SCHEMA_VERSION",
     "FirstStageConfig",
     "GAConfig",
     "LockingConfig",
@@ -49,7 +55,9 @@ __all__ = [
     "XGBoostWrapperConfig",
     "parse_split_ratio",
     "train_test_split_frame",
+    "validate_locking_artifact_directory",
     "run_genetic_rf",
     "lock_representative_run",
     "score_candidate_feature_sets",
+    "__version__",
 ]

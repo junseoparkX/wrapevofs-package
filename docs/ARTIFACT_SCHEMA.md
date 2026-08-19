@@ -1,6 +1,6 @@
 # Artifact schema
 
-The upgraded schema version is `2.0`. Existing core paths are retained; new columns and locking directories are additive.
+The artifact schema version is `2.1`. Existing core paths are retained; new columns, locking directories, version metadata, and checkpoint validation are additive.
 
 ## GA artifacts
 
@@ -20,6 +20,10 @@ The upgraded schema version is `2.0`. Existing core paths are retained; new colu
 - `best_base_score_audit`, `fitness_mode`, `generation_warning_count`.
 
 `summary.json` records `artifact_schema_version`, requested/actual backend, fitness mode, parameters, and warnings. `warnings.json` aggregates pipeline and GA warnings.
+
+The run root contains `software_metadata.json` with package and artifact-schema versions. GA summaries additionally record package version and SHA-256 fingerprints for scientific GA configuration, ordered candidate universe, and exact ordered development inputs.
+
+When checkpointing is enabled, `resume_state.npz` uses checkpoint-state schema `1.0`. It contains a JSON scalar plus numeric population array and is loaded without pickle. See `CHECKPOINT_RESUME.md`.
 
 ## Locking artifacts
 
@@ -61,4 +65,4 @@ When locking is enabled, `final_feature_sets.npy` and `locked_feature_sets.npy` 
 
 ## Schema migration
 
-Schema 2.0 is additive for core GA paths. Consumers should select columns by name rather than position and should check `artifact_schema_version` before requiring new audit columns.
+Schema 2.1 is additive for core GA paths but introduces validated version fields and resumable state. Consumers should select columns by name rather than position and must check `artifact_schema_version` before requiring new fields. `validate_locking_artifact_directory` rejects missing fields and package/schema mismatches.

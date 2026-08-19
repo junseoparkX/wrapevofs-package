@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,10 @@ from sklearn.model_selection import StratifiedKFold
 
 from wrapevofs.config import GAConfig
 from wrapevofs._scoring import infer_problem_type, unique_classes
+from wrapevofs._version import ARTIFACT_SCHEMA_VERSION, __version__
+
+
+_RESUME_STATE_VERSION = "1.0"
 
 
 def _json_default(value: Any) -> Any:
@@ -596,6 +600,121 @@ def _solution_rows(top_solutions: list[GASolution]) -> list[dict[str, Any]]:
     ]
 
 
+def _canonical_json(value: Any) -> str:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        default=_json_default,
+    )
+
+
+def _sha256_json(value: Any) -> str:
+    return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def _config_fingerprint(config: GAConfig) -> str:
+    values = asdict(config)
+    for non_scientific_field in (
+        "checkpoint_dir",
+        "resume_from_checkpoint",
+        "verbose",
+        "progress_interval",
+    ):
+        values.pop(non_scientific_field, None)
+    return _sha256_json(values)
+
+
+def _feature_fingerprint(feature_names: list[str]) -> str:
+    return _sha256_json(feature_names)
+
+
+def _input_fingerprint(X: pd.DataFrame, y: pd.Series) -> str:
+    """Fingerprint the exact ordered development inputs without serializing data."""
+
+    payload = {
+        "x_columns": [str(item) for item in X.columns],
+        "x_dtypes": [str(item) for item in X.dtypes],
+        "x_shape": list(X.shape),
+        "y_name": None if y.name is None else str(y.name),
+        "y_dtype": str(y.dtype),
+        "y_shape": list(y.shape),
+    }
+    digest = hashlib.sha256(_canonical_json(payload).encode("utf-8"))
+    x_hashes = pd.util.hash_pandas_object(X, index=True).to_numpy(dtype="uint64")
+    y_hashes = pd.util.hash_pandas_object(y, index=True).to_numpy(dtype="uint64")
+    digest.update(np.ascontiguousarray(x_hashes).tobytes())
+    digest.update(np.ascontiguousarray(y_hashes).tobytes())
+    return digest.hexdigest()
+
+
+def _serialize_solutions(solutions: list[GASolution]) -> list[dict[str, Any]]:
+    return [
+        {
+            "rank": item.rank,
+            "run_id": item.run_id,
+            "score": item.score,
+            "base_score": item.base_score,
+            "n_features": item.n_features,
+            "mask": np.asarray(item.mask, dtype=np.uint8).tolist(),
+            "selected_features": list(item.selected_features),
+            "raw_objective": item.raw_objective,
+            "legacy_truncated_fitness": item.legacy_truncated_fitness,
+            "target_deviation": item.target_deviation,
+            "penalty_amount": item.penalty_amount,
+            "stable_mask_hash": item.stable_mask_hash,
+        }
+        for item in solutions
+    ]
+
+
+def _deserialize_solutions(
+    rows: list[dict[str, Any]], feature_names: list[str]
+) -> list[GASolution]:
+    solutions: list[GASolution] = []
+    for index, row in enumerate(rows):
+        try:
+            mask = np.asarray(row["mask"], dtype=bool)
+            stored_hash = str(row["stable_mask_hash"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Resume checkpoint solution {index} is malformed."
+            ) from exc
+        if mask.ndim != 1 or mask.size != len(feature_names):
+            raise ValueError(
+                f"Resume checkpoint solution {index} has an invalid mask shape."
+            )
+        if _stable_mask_hash(mask) != stored_hash:
+            raise ValueError(
+                f"Resume checkpoint solution {index} failed stable-mask-hash validation."
+            )
+        selected_features = [
+            feature_names[position] for position in np.flatnonzero(mask)
+        ]
+        if selected_features != list(row.get("selected_features", [])):
+            raise ValueError(
+                f"Resume checkpoint solution {index} has inconsistent feature labels."
+            )
+        solutions.append(
+            GASolution(
+                rank=int(row["rank"]),
+                run_id=int(row["run_id"]),
+                score=float(row["score"]),
+                base_score=float(row["base_score"]),
+                n_features=int(row["n_features"]),
+                mask=mask,
+                selected_features=selected_features,
+                raw_objective=float(row["raw_objective"]),
+                legacy_truncated_fitness=float(row["legacy_truncated_fitness"]),
+                target_deviation=int(row["target_deviation"]),
+                penalty_amount=float(row["penalty_amount"]),
+                stable_mask_hash=stored_hash,
+            )
+        )
+    return solutions
+
+
 def _replace_text(path: Path, text: str) -> None:
     tmp = path.with_name(f"{path.name}.tmp")
     tmp.write_text(text, encoding="utf-8")
@@ -615,6 +734,176 @@ def _replace_npy(path: Path, values: np.ndarray, allow_pickle: bool = False) -> 
     tmp.replace(path)
 
 
+def _replace_npz(path: Path, **arrays: np.ndarray) -> None:
+    tmp = path.with_name(f"{path.name}.tmp")
+    with tmp.open("wb") as handle:
+        np.savez_compressed(handle, **arrays)
+    tmp.replace(path)
+
+
+def _resume_context(
+    X: pd.DataFrame,
+    y: pd.Series,
+    *,
+    name: str,
+    target_k: int,
+    config: GAConfig,
+    backend: _RFBackend,
+) -> dict[str, Any]:
+    feature_names = [str(item) for item in X.columns]
+    return {
+        "resume_state_version": _RESUME_STATE_VERSION,
+        "software_version": __version__,
+        "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
+        "name": name,
+        "target_k": int(target_k),
+        "requested_backend": config.backend,
+        "actual_backend": backend.name,
+        "configuration_sha256": _config_fingerprint(config),
+        "candidate_universe_sha256": _feature_fingerprint(feature_names),
+        "input_sha256": _input_fingerprint(X, y),
+        "feature_names": feature_names,
+        "population_size": int(config.population_size),
+        "n_generations": int(config.n_generations),
+        "n_runs": int(config.n_runs),
+    }
+
+
+def _write_resume_checkpoint(
+    checkpoint_dir: Path,
+    *,
+    context: dict[str, Any],
+    run_id: int,
+    next_generation: int,
+    population: list[np.ndarray],
+    rng_state: dict[str, Any],
+    top_solutions: list[GASolution],
+    history_rows: list[dict[str, Any]],
+    warnings: list[str],
+) -> dict[str, Any]:
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    state = {
+        **context,
+        "run_id": int(run_id),
+        "next_generation": int(next_generation),
+        "rng_state": rng_state,
+        "top_solutions": _serialize_solutions(top_solutions),
+        "history_rows": history_rows,
+        "history_columns": list(history_rows[0]) if history_rows else [],
+        "warnings": warnings,
+    }
+    population_array = np.asarray(population, dtype=np.uint8)
+    if population_array.shape != (
+        context["population_size"],
+        len(context["feature_names"]),
+    ):
+        raise RuntimeError("Internal error: checkpoint population shape is invalid.")
+    _replace_npz(
+        checkpoint_dir / "resume_state.npz",
+        metadata=np.asarray(_canonical_json(state)),
+        population=population_array,
+    )
+    return {
+        key: state[key]
+        for key in (
+            "resume_state_version",
+            "software_version",
+            "artifact_schema_version",
+            "configuration_sha256",
+            "candidate_universe_sha256",
+            "input_sha256",
+            "run_id",
+            "next_generation",
+        )
+    }
+
+
+def _load_resume_checkpoint(
+    checkpoint_dir: Path,
+    *,
+    expected_context: dict[str, Any],
+) -> dict[str, Any]:
+    path = checkpoint_dir / "resume_state.npz"
+    if not path.is_file():
+        raise ValueError(
+            f"Resume requested, but checkpoint state does not exist: {path}"
+        )
+    try:
+        with np.load(path, allow_pickle=False) as archive:
+            if set(archive.files) != {"metadata", "population"}:
+                raise ValueError("checkpoint archive members are invalid")
+            metadata = json.loads(str(archive["metadata"].item()))
+            population = np.asarray(archive["population"], dtype=bool)
+    except Exception as exc:
+        raise ValueError(f"Resume checkpoint is corrupt or unreadable: {path}") from exc
+
+    context_keys = (
+        "resume_state_version",
+        "software_version",
+        "artifact_schema_version",
+        "name",
+        "target_k",
+        "requested_backend",
+        "actual_backend",
+        "configuration_sha256",
+        "candidate_universe_sha256",
+        "input_sha256",
+        "feature_names",
+        "population_size",
+        "n_generations",
+        "n_runs",
+    )
+    mismatches = [
+        key
+        for key in context_keys
+        if metadata.get(key) != expected_context.get(key)
+    ]
+    if mismatches:
+        raise ValueError(
+            "Resume checkpoint mismatch for: " + ", ".join(sorted(mismatches))
+        )
+
+    expected_shape = (
+        expected_context["population_size"],
+        len(expected_context["feature_names"]),
+    )
+    if population.shape != expected_shape:
+        raise ValueError(
+            f"Resume checkpoint population shape {population.shape} does not match "
+            f"expected {expected_shape}."
+        )
+    try:
+        run_id = int(metadata["run_id"])
+        next_generation = int(metadata["next_generation"])
+        rng_state = metadata["rng_state"]
+        history_columns = [str(item) for item in metadata["history_columns"]]
+        history_rows = [
+            {column: row.get(column) for column in history_columns}
+            for row in metadata["history_rows"]
+        ]
+        warnings = [str(item) for item in metadata["warnings"]]
+        top_solutions = _deserialize_solutions(
+            list(metadata["top_solutions"]), expected_context["feature_names"]
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        if isinstance(exc, ValueError) and str(exc).startswith("Resume checkpoint"):
+            raise
+        raise ValueError("Resume checkpoint metadata is incomplete or malformed.") from exc
+    if not 0 <= run_id < expected_context["n_runs"]:
+        raise ValueError("Resume checkpoint run_id is out of range.")
+    if not 0 <= next_generation <= expected_context["n_generations"]:
+        raise ValueError("Resume checkpoint next_generation is out of range.")
+    return {
+        "run_id": run_id,
+        "next_generation": next_generation,
+        "population": [item.copy() for item in population],
+        "rng_state": rng_state,
+        "top_solutions": top_solutions,
+        "history_rows": history_rows,
+        "warnings": warnings,
+    }
+
+
 def _write_live_checkpoint(
     checkpoint_dir: Path,
     *,
@@ -630,6 +919,7 @@ def _write_live_checkpoint(
     completed_generation: int,
     is_complete: bool,
     warnings: list[str],
+    resume_metadata: dict[str, Any],
 ) -> None:
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     rows = _solution_rows(top_solutions)
@@ -680,7 +970,11 @@ def _write_live_checkpoint(
         "fitness_metric": config.fitness_metric,
         "size_penalty_lambda": config.size_penalty_lambda,
         "fitness_mode": config.fitness_mode,
-        "artifact_schema_version": "2.0",
+        "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
+        "software_version": __version__,
+        "resumable": True,
+        "resume_state_file": "resume_state.npz",
+        **resume_metadata,
         "warnings": warnings,
         "top_k": config.top_k,
         "progress_interval": config.progress_interval,
@@ -749,8 +1043,31 @@ def run_genetic_rf(
     feature_names = list(X.columns)
     progress_interval = max(1, int(config.progress_interval))
     checkpoint_dir = Path(config.checkpoint_dir) if config.checkpoint_dir else None
+    resume_context = _resume_context(
+        X,
+        y,
+        name=name,
+        target_k=target_k,
+        config=config,
+        backend=backend,
+    )
+    resume_state: dict[str, Any] | None = None
+    if config.resume_from_checkpoint:
+        if checkpoint_dir is None:
+            raise ValueError(
+                "resume_from_checkpoint requires ga.checkpoint_dir to be configured."
+            )
+        resume_state = _load_resume_checkpoint(
+            checkpoint_dir,
+            expected_context=resume_context,
+        )
+        top_solutions = resume_state["top_solutions"]
+        history_rows = resume_state["history_rows"]
+        ga_warnings = resume_state["warnings"]
 
     for run_id in range(config.n_runs):
+        if resume_state is not None and run_id < resume_state["run_id"]:
+            continue
         if config.verbose:
             print(
                 f"[GA-RF:{name}] run {run_id + 1}/{config.n_runs} started "
@@ -764,8 +1081,20 @@ def run_genetic_rf(
             config.initial_off_ratio,
             rng,
         )
+        start_generation = 0
+        if resume_state is not None and run_id == resume_state["run_id"]:
+            start_generation = resume_state["next_generation"]
+            if start_generation >= config.n_generations:
+                continue
+            population = [item.copy() for item in resume_state["population"]]
+            try:
+                rng.bit_generator.state = resume_state["rng_state"]
+            except Exception as exc:
+                raise ValueError(
+                    "Resume checkpoint RNG state is incompatible or malformed."
+                ) from exc
 
-        for generation in range(config.n_generations):
+        for generation in range(start_generation, config.n_generations):
             evaluation = _evaluate_population_detailed(
                 population,
                 X_np,
@@ -887,32 +1216,6 @@ def run_genetic_rf(
                 }
             )
             completed_generation = generation + 1
-            should_checkpoint = (
-                checkpoint_dir is not None
-                and (
-                    completed_generation % progress_interval == 0
-                    or completed_generation == config.n_generations
-                )
-            )
-            if should_checkpoint:
-                _write_live_checkpoint(
-                    checkpoint_dir,
-                    name=name,
-                    target_k=target_k,
-                    config=config,
-                    backend=backend,
-                    top_solutions=top_solutions,
-                    history_rows=history_rows,
-                    problem_type=problem_type,
-                    classes=classes,
-                    run_id=run_id,
-                    completed_generation=completed_generation,
-                    is_complete=(
-                        run_id == config.n_runs - 1
-                        and completed_generation == config.n_generations
-                    ),
-                    warnings=ga_warnings,
-                )
             if config.verbose and (
                 completed_generation % progress_interval == 0
                 or completed_generation == config.n_generations
@@ -937,6 +1240,45 @@ def run_genetic_rf(
             for child in children:
                 if len(population) < config.population_size:
                     population.append(child)
+
+            should_checkpoint = (
+                checkpoint_dir is not None
+                and (
+                    completed_generation % progress_interval == 0
+                    or completed_generation == config.n_generations
+                )
+            )
+            if should_checkpoint:
+                resume_metadata = _write_resume_checkpoint(
+                    checkpoint_dir,
+                    context=resume_context,
+                    run_id=run_id,
+                    next_generation=completed_generation,
+                    population=population,
+                    rng_state=rng.bit_generator.state,
+                    top_solutions=top_solutions,
+                    history_rows=history_rows,
+                    warnings=ga_warnings,
+                )
+                _write_live_checkpoint(
+                    checkpoint_dir,
+                    name=name,
+                    target_k=target_k,
+                    config=config,
+                    backend=backend,
+                    top_solutions=top_solutions,
+                    history_rows=history_rows,
+                    problem_type=problem_type,
+                    classes=classes,
+                    run_id=run_id,
+                    completed_generation=completed_generation,
+                    is_complete=(
+                        run_id == config.n_runs - 1
+                        and completed_generation == config.n_generations
+                    ),
+                    warnings=ga_warnings,
+                    resume_metadata=resume_metadata,
+                )
         if config.verbose and top_solutions:
             run_best = next(
                 (solution for solution in top_solutions if solution.run_id == run_id),
@@ -977,7 +1319,8 @@ def run_genetic_rf(
                 config.target_deviation_warning_threshold
             ),
             "minimum_unique_masks_warning": config.minimum_unique_masks_warning,
-            "artifact_schema_version": "2.0",
+            "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
+            "software_version": __version__,
             "top_k": config.top_k,
             "cv_folds": config.cv_folds,
             "fitness_metric": config.fitness_metric,
@@ -988,6 +1331,13 @@ def run_genetic_rf(
             "verbose": config.verbose,
             "progress_interval": config.progress_interval,
             "checkpoint_dir": config.checkpoint_dir,
+            "resumed_from_checkpoint": bool(config.resume_from_checkpoint),
+            "resume_state_version": _RESUME_STATE_VERSION,
+            "configuration_sha256": resume_context["configuration_sha256"],
+            "candidate_universe_sha256": resume_context[
+                "candidate_universe_sha256"
+            ],
+            "input_sha256": resume_context["input_sha256"],
             "requested_backend": config.backend,
             "actual_backend": backend.name,
             "backend_fallback_reason": backend.fallback_reason,

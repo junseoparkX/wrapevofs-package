@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from wrapevofs._version import CONFIG_SCHEMA_VERSION
+
 
 def _replace_dataclass(instance: Any, values: dict[str, Any] | None) -> Any:
     if values is None:
@@ -205,6 +207,7 @@ class GAConfig:
     verbose: bool = False
     progress_interval: int = 10
     checkpoint_dir: str | None = None
+    resume_from_checkpoint: bool = False
     rf_params: dict[str, Any] = field(
         default_factory=lambda: {
             "n_estimators": 150,
@@ -259,6 +262,7 @@ class ScoringConfig:
 
 @dataclass
 class PipelineConfig:
+    config_schema_version: str = CONFIG_SCHEMA_VERSION
     split: SplitConfig = field(default_factory=SplitConfig)
     preprocessing: PreprocessingConfig = field(default_factory=PreprocessingConfig)
     first_stage: FirstStageConfig = field(default_factory=FirstStageConfig)
@@ -272,6 +276,13 @@ class PipelineConfig:
         config = cls()
         if not values:
             return config
+        supplied_schema = values.get("config_schema_version", CONFIG_SCHEMA_VERSION)
+        if str(supplied_schema) != CONFIG_SCHEMA_VERSION:
+            raise ValueError(
+                "Unsupported configuration schema version "
+                f"{supplied_schema!r}; expected {CONFIG_SCHEMA_VERSION!r}."
+            )
+        config.config_schema_version = CONFIG_SCHEMA_VERSION
         for section in (
             "split",
             "preprocessing",

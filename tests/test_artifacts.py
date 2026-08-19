@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
+import json
 from sklearn.datasets import make_classification
 
 from wrapevofs import WrapEvoPipeline, PipelineConfig
 from wrapevofs.artifacts import save_pipeline_result
+from wrapevofs import ARTIFACT_SCHEMA_VERSION, __version__
 
 
 def test_save_pipeline_result_exports_top_ga_feature_sets(tmp_path):
@@ -25,10 +27,10 @@ def test_save_pipeline_result_exports_top_ga_feature_sets(tmp_path):
             "first_stage": {
                 "enabled_methods": ["svm_l1"],
                 "svm_l1": {
-                    "c_grid": [0.1, 1.0, 10.0],
+                    "c_grid": [0.1, 1.0],
                     "cv_folds": 2,
                     "n_jobs": 1,
-                    "max_iter": 5000,
+                    "max_iter": 100000,
                 },
             },
             "rfecv": {
@@ -68,6 +70,9 @@ def test_save_pipeline_result_exports_top_ga_feature_sets(tmp_path):
     )
     top_table = pd.read_csv(tmp_path / "ga" / "svm_l1" / "top_solutions.csv")
     history = pd.read_csv(tmp_path / "ga" / "svm_l1" / "history.csv")
+    software_metadata = json.loads(
+        (tmp_path / "software_metadata.json").read_text(encoding="utf-8")
+    )
 
     assert "svm_l1" in final_feature_sets
     assert len(final_feature_sets["svm_l1"]) == 5
@@ -88,3 +93,8 @@ def test_save_pipeline_result_exports_top_ga_feature_sets(tmp_path):
         "uniform_sampling_fallback",
         "population_unique_masks",
     }.issubset(history.columns)
+    assert software_metadata == {
+        "software_name": "wrapevofs",
+        "software_version": __version__,
+        "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
+    }

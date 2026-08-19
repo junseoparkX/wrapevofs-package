@@ -10,10 +10,12 @@ import pandas as pd
 from wrapevofs.artifacts import save_pipeline_result
 from wrapevofs.config import PipelineConfig
 from wrapevofs.pipeline import WrapEvoPipeline
+from wrapevofs._version import __version__
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="wrapevofs")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run = subparsers.add_parser("run", help="Run preprocessing through RFECV target discovery.")
@@ -65,6 +67,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Apply one compatible metric across RFECV, GA, and locking.",
     )
     run.add_argument("--run-ga", action="store_true", help="Continue from RFECV target discovery into GA-RF.")
+    run.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Resume GA state from each branch checkpoint directory. Fails on "
+            "missing, corrupt, version-, configuration-, feature-, or input-mismatched state."
+        ),
+    )
     return parser
 
 
@@ -101,6 +111,10 @@ def main(argv: list[str] | None = None) -> int:
             config.locking.minimum_pool_size = args.minimum_pool_size
         if args.unified_metric:
             config.scoring.unified_metric = args.unified_metric
+        if args.resume:
+            if not args.run_ga:
+                raise SystemExit("--resume requires --run-ga.")
+            config.ga.resume_from_checkpoint = True
         methods = args.methods.split(",") if args.methods else None
         drop_columns = args.drop_columns.split(",") if args.drop_columns else None
 

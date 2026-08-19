@@ -63,6 +63,10 @@ wrapevofs run \
 ```
 
 Run `wrapevofs run --help` for the complete interface.
+Use `wrapevofs --version` to report the installed package version. A run with a
+matching atomic GA state can be continued by repeating its original command
+with `--resume`; mismatched or corrupt states are rejected rather than silently
+starting a new search.
 
 ## Regret-constrained representative locking
 
@@ -72,7 +76,7 @@ See [`configs/recommended_regret_constrained.yaml`](configs/recommended_regret_c
 
 ## Reproducibility and audit outputs
 
-Locking exports a candidate audit, eligible-pool Jaccard matrix, selected features, and summary metadata under `locking/<branch>/`. The audit records canonical masks, stable hashes, duplicate multiplicity, scores, regrets, eligibility, agreement, seeds, metric orientation, and configuration hashes. Details are in [`docs/ARTIFACT_SCHEMA.md`](docs/ARTIFACT_SCHEMA.md) and [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md).
+Locking exports a candidate audit, eligible-pool Jaccard matrix, selected features, and summary metadata under `locking/<branch>/`. The audit records canonical masks, stable hashes, duplicate multiplicity, scores, regrets, eligibility, agreement, seeds, metric orientation, and configuration hashes. Details are in [`docs/ARTIFACT_SCHEMA.md`](docs/ARTIFACT_SCHEMA.md), [`docs/CHECKPOINT_RESUME.md`](docs/CHECKPOINT_RESUME.md), and [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md).
 
 ## Testing
 

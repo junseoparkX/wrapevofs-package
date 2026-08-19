@@ -18,6 +18,7 @@ import pandas as pd
 from wrapevofs.config import LockingConfig
 from wrapevofs._scoring import infer_problem_type
 from wrapevofs.selectors.genetic_rf import _stable_mask_hash
+from wrapevofs._version import ARTIFACT_SCHEMA_VERSION, __version__
 
 
 @dataclass(frozen=True)
@@ -219,7 +220,7 @@ def lock_representative_run(
     candidates: Sequence[LockingCandidate],
     config: LockingConfig | None = None,
     *,
-    software_version: str = "0.2.0",
+    software_version: str = __version__,
     full_configuration: Mapping[str, Any] | None = None,
     seeds: Mapping[str, Any] | None = None,
 ) -> LockingResult:
@@ -552,6 +553,7 @@ def lock_representative_run(
             "selected_run_id": selected.run_id,
             "selected_source_run_ids": selected_source_run_ids,
             "selected_stable_mask_hash": selected_mask_hash,
+            "selected_feature_set": list(selected.features),
             "selected_source_run_id_role": (
                 "provenance_only_after_scientific_feature_set_selection"
             ),
@@ -569,7 +571,7 @@ def lock_representative_run(
             "software_version": software_version,
             "configuration_hash": config_hash,
             "held_out_used": False,
-            "artifact_schema_version": "2.0",
+            "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
         },
     )
 

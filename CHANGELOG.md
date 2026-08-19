@@ -10,6 +10,8 @@
 - Preserved explicit `top_k_jaccard_medoid` and `legacy_zero_truncated_linear` compatibility modes.
 - Added GA flattening, sampling-fallback, target-deviation, and mask-diversity diagnostics.
 - Added versioned locking and GA audit artifacts, configuration hashes, and aggregated warnings.
+- Added atomic, fingerprint-validated GA checkpoint resume without silent restart.
+- Added package, configuration, and artifact schema validation helpers.
 - Added compatible unified metric support and mixed-development-metric warnings.
 - Added CLI and Python API options, regression tests, a synthetic one-command example, and schema documentation.
 - Added BSD-3-Clause licensing and release-ready package metadata.

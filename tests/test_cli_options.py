@@ -24,6 +24,7 @@ def test_cli_exposes_upgraded_ga_locking_and_metric_options():
             "--unified-metric",
             "macro_ovr_auroc",
             "--run-ga",
+            "--resume",
         ]
     )
 
@@ -34,3 +35,4 @@ def test_cli_exposes_upgraded_ga_locking_and_metric_options():
     assert args.minimum_pool_size == 1
     assert args.unified_metric == "macro_ovr_auroc"
     assert args.run_ga is True
+    assert args.resume is True
