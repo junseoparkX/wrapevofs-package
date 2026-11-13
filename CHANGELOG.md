@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 - 2026-11-12
+
+- Added opt-in `calibrate_tolerance` and `ToleranceCalibrationResult` for multiple development candidate banks, leaving existing single-bank behavior and reference defaults unchanged.
+- Exhaustively search observed within-bank score-gap breakpoints by default; support explicit grids for comparison, with strict full-precision eligibility.
+- Apply a delta-zero bank-averaged fold-SE training filter, then maximize fitted cross-bank Jaccard, breaking ties by higher development score and smaller allowance.
+- Validate feature sets, canonical universes, candidate identities, finite scores, score/fold-mean consistency, and shared fold counts; return the complete curve, input fingerprint, and per-bank selection provenance.
+- Added synthetic examples, boundary and randomized regression tests, and API documentation. The SE filter supplies no generalization or noninferiority guarantee. The motivating retrospective historical comparison does not demonstrate improved AUROC or independently validate fitted overlap.
+
 ## 0.2.0
 
 - Added development-only `regret_constrained_medoid` locking with absolute, relative, and best-run-SE-scaled eligibility.

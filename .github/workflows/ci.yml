@@ -56,5 +56,6 @@ jobs:
           python -m venv /tmp/wrapevofs-release-test
           /tmp/wrapevofs-release-test/bin/python -m pip install --upgrade pip
           /tmp/wrapevofs-release-test/bin/python -m pip install dist/*.whl
-          /tmp/wrapevofs-release-test/bin/python -c "import wrapevofs; assert wrapevofs.__version__ == '0.2.0'"
+          /tmp/wrapevofs-release-test/bin/python -c "import wrapevofs; assert wrapevofs.__version__ == '0.3.0'"
+          /tmp/wrapevofs-release-test/bin/python examples/toy_tolerance_calibration.py
           /tmp/wrapevofs-release-test/bin/wrapevofs --help

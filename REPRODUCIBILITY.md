@@ -62,6 +62,19 @@ When distinct source runs contain the same mask, the records remain separate vot
 
 See `docs/ARTIFACT_SCHEMA.md` for the complete output schema.
 
+## Opt-in multi-bank calibration
+
+`python examples/toy_tolerance_calibration.py` demonstrates the 0.3.0 API with
+synthetic development summaries. Calibration is separate from the reference
+pipeline and does not change its settings. Tests verify exact breakpoint
+eligibility, the bank-averaged fold-SE calculation, deterministic provenance,
+malformed input rejection and agreement with the existing single-bank selector.
+See `docs/TOLERANCE_CALIBRATION.md` for the exhaustive search and explicit-grid
+option. Keep full precision when storing scores and applying the fitted allowance.
+Freeze the rule before evaluating a subsequent bank or held-out outcomes.
+Calibration overlap is fitted and the SE filter is a training heuristic; neither
+is independent evidence of reproducibility or a predictive guarantee.
+
 ## Data boundary
 
 Do not commit participant-level, controlled-access, or provider-restricted data to this repository. The bundled smoke-test CSV is synthetic. WrapEvoFS begins from already extracted tabular features and does not claim raw imaging or assay reconstruction.

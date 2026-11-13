@@ -27,6 +27,7 @@ from wrapevofs.locking import (
     score_candidate_feature_sets,
 )
 from wrapevofs.preprocessing import TabularPreprocessor
+from wrapevofs.calibration import ToleranceCalibrationResult, calibrate_tolerance
 from wrapevofs.validation import validate_locking_artifact_directory
 from wrapevofs.selectors.genetic_rf import GASolution, GeneticRFResult, run_genetic_rf
 from wrapevofs.split import parse_split_ratio, train_test_split_frame
@@ -52,6 +53,8 @@ __all__ = [
     "SVML1WrapperConfig",
     "SplitConfig",
     "TabularPreprocessor",
+    "ToleranceCalibrationResult",
+    "calibrate_tolerance",
     "XGBoostWrapperConfig",
     "parse_split_ratio",
     "train_test_split_frame",

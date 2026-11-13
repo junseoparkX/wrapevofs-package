@@ -36,3 +36,26 @@ For the recommended absolute regret-constrained medoid, the eligible pool is nev
 ## Metric alignment
 
 `scoring.unified_metric: macro_ovr_auroc` resolves to `roc_auc` for binary outcomes and `roc_auc_ovr` for multiclass outcomes. Without a unified metric, the pipeline preserves configured legacy objectives and emits a warning when active development-stage metrics differ.
+
+## Optional multi-bank calibration (0.3.0)
+
+```python
+from wrapevofs import calibrate_tolerance, ToleranceCalibrationResult
+
+# banks: mapping of unique string bank IDs to sequences of LockingCandidate.
+fitted = calibrate_tolerance(banks, delta_grid=None, fold_ids=None)
+```
+
+This public library entry point accepts only development candidate summaries.
+It does not run automatically in the pipeline or CLI. `delta_grid=None` searches
+all observed within-bank score gaps; an explicit nonnegative finite grid must
+include zero. `fold_ids` optionally labels the common ordered development splits.
+The caller must use the same splits, score metric, orientation and fold order
+for every candidate. Each score must equal its fold mean within `1e-12`.
+
+`ToleranceCalibrationResult` contains `selected_delta`, a `curve` DataFrame,
+`bank_results` mapping bank IDs to existing `LockingResult` audits, and
+`metadata` with the baseline, SE filter, search settings and input fingerprint.
+Freeze `selected_delta` and pass it as an absolute `LockingConfig.regret_tolerance`
+to subsequent single-bank locking. Full rule and evidence limits:
+[`TOLERANCE_CALIBRATION.md`](TOLERANCE_CALIBRATION.md).

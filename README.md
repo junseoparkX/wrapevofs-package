@@ -12,6 +12,7 @@ WrapEvoFS is a Python package for auditable stochastic feature compression. It c
 - corrected untruncated genetic-search objective with separate nonnegative sampling weights;
 - absolute, relative, and best-run-SE-scaled empirical regret modes;
 - Jaccard-medoid locking within the eligible candidate pool;
+- opt-in multi-bank development-only tolerance calibration over observed score gaps;
 - canonical feature-mask encoding and deterministic SHA-256 tie ordering;
 - complete candidate, regret, agreement, seed, and configuration audits;
 - checkpoint/resume support and explicit legacy-compatible modes;
@@ -26,7 +27,13 @@ WrapEvoFS supports Python 3.10–3.12. Install the latest public release from
 python -m pip install wrapevofs
 ```
 
-For an exact, reproducible installation of the manuscript-associated release:
+For an exact installation with the opt-in calibration API:
+
+```bash
+python -m pip install wrapevofs==0.3.0
+```
+
+The earlier reference release remains available for reproducing archived analyses:
 
 ```bash
 python -m pip install wrapevofs==0.2.0
@@ -95,6 +102,37 @@ For larger-is-better development scores, candidate regret is the gap from the hi
 See [`configs/recommended_regret_constrained.yaml`](configs/recommended_regret_constrained.yaml) for the recommended new-analysis settings. Archived configurations preserve the legacy zero-truncated objective and top-k medoid behavior when those modes are selected.
 
 ## Reproducibility and audit outputs
+
+### Optional multi-bank tolerance calibration
+
+Version 0.3.0 adds `calibrate_tolerance(banks, *, delta_grid=None, fold_ids=None)`.
+It accepts only candidate feature sets, development scores and aligned development
+fold vectors (plus provenance labels). It searches zero and all observed
+within-bank score gaps, applies a development-fold SE heuristic, and maximizes
+fitted cross-bank Jaccard with deterministic ties. An explicit `delta_grid`
+supports grid comparisons. Existing pipeline settings, reference defaults, and
+single-bank locking are unchanged; calibration runs only when called explicitly.
+
+```python
+from wrapevofs import LockingCandidate, calibrate_tolerance
+
+banks = {
+    "bank_a": [LockingCandidate(0, ["a", "b"], 0.90, [0.88, 0.92])],
+    "bank_b": [LockingCandidate(0, ["a", "c"], 0.89, [0.87, 0.91])],
+}
+fitted = calibrate_tolerance(banks, fold_ids=["split_0", "split_1"])
+print(fitted.selected_delta)
+print(fitted.curve)
+```
+
+All fold vectors must refer to the same splits in the same order. The SE filter
+is a training heuristic, with no generalization or noninferiority guarantee.
+Fitted-bank overlap is an optimization objective and requires separate validation.
+The retrospective motivating analysis was designed after earlier held-out
+comparisons and does not establish improved AUROC. See
+[`docs/TOLERANCE_CALIBRATION.md`](docs/TOLERANCE_CALIBRATION.md) for the exact rule,
+input validation, audits, and the limits of that exploratory evidence. Run
+`python examples/toy_tolerance_calibration.py` for a synthetic example.
 
 Locking exports a candidate audit, eligible-pool Jaccard matrix, selected features, and summary metadata under `locking/<branch>/`. The audit records canonical masks, stable hashes, duplicate multiplicity, scores, regrets, eligibility, agreement, seeds, metric orientation, and configuration hashes. Details are in [`docs/ARTIFACT_SCHEMA.md`](docs/ARTIFACT_SCHEMA.md), [`docs/CHECKPOINT_RESUME.md`](docs/CHECKPOINT_RESUME.md), and [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md).
 
