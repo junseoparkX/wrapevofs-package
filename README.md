@@ -7,6 +7,10 @@
 
 WrapEvoFS is a Python package for auditable stochastic feature compression. It combines branch-specific screening, RFECV-derived size guidance, repeated genetic searches, and deterministic regret-constrained representative locking for binary or multiclass tabular classification. Selection and locking use development data only; held-out outcomes are not inputs to the locking decision.
 
+[![Figure 1. WrapEvoFS development-only selection and representative-locking workflow](https://raw.githubusercontent.com/junseoparkX/wrapevofs-package/main/.github/assets/figure-1-workflow.png)](https://github.com/junseoparkX/wrapevofs-package/blob/main/.github/assets/figure-1-workflow.pdf)
+
+**Figure 1.** Development-only feature selection and representative locking, followed by held-out evaluation. The diagram shows the reference workflow; optional multi-bank tolerance calibration is described below. Click the figure for the original vector PDF.
+
 ## Key features
 
 - corrected untruncated genetic-search objective with separate nonnegative sampling weights;
